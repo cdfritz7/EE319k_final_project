@@ -1202,7 +1202,7 @@ void Sound_Highpitch(void){
 void Timer2A_Handler(void){
 	TIMER2_ICR_R = 0x00000001; //acknowledge
 	TimerCount++;
-	DAC_Out((int)(globalpt[globalCount]/16));
+	DAC_Out((int)(globalpt[globalCount]/16));	//divide by 16 because we are using a 4 bit DAC
 	globalCount = (globalCount+1)%globalMaxCount;
 	if(TimerCount == globalMaxCount){
 		Timer2A_Stop();
