@@ -62,12 +62,14 @@
 #include "DAC.h"
 #include "buttons.h"
 #include "Timer1.h"
+#include "Timer0.h"
 
 
 void DisableInterrupts(void); // Disable interrupts
 void EnableInterrupts(void);  // Enable interrupts
 void Delay100ms(uint32_t count); // time delay in 0.1 seconds
 void incrPlayer1Projectiles(void);
+void incrPlayer2Projectiles(void);
 
 // *************************** Images ***************************
 // enemy ship that starts at the top of the screen (arms/mouth closed)
@@ -312,9 +314,15 @@ const unsigned short shipbox[] = {
  0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
  0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
  0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
-
 };
 
+//8x8 black box for projectiles
+const unsigned short projectilebox[] = {
+ 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+ 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+ 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+ 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+};
 
 // *************************** Capture image dimensions out of BMP**********
 typedef enum {dead, alive} status_t;
@@ -375,7 +383,8 @@ int main(void){
 	Sound_Init();
 	ADC_Init();							//init slide pot 1&2
 	buttons_Init();
-	//Timer1_Init(void(*incrPlayer1Projectiles()));				  //initialize timer for player1 projectiles
+	Timer1_Init(&incrPlayer1Projectiles);				  //initialize timer for player1 projectiles
+	Timer0_Init(&incrPlayer2Projectiles);
 	EnableInterrupts();
 
   
@@ -397,7 +406,7 @@ int main(void){
 			for(i = 0; i<5; i++){
 				if(blueprojectiles[i].life == dead){									//if so make a new blue projectile
 					blueprojectiles[i].life = alive;
-					blueprojectiles[i].x = players[0].x;							//new projectile location set to player 1 pos
+					blueprojectiles[i].x = players[0].x+3;							//new projectile location set to player 1 pos +3 to place it in middle of ship
 					shootbool = 1;
 					player1button = 0;
 					break;
@@ -412,7 +421,7 @@ int main(void){
 			for(i = 0; i<5; i++){
 				if(greenprojectiles[i].life == dead){								//if so make a new green projectile
 					greenprojectiles[i].life = alive;
-					greenprojectiles[i].x = players[1].x;							//new projectile location set to player 2 pos
+					greenprojectiles[i].x = players[1].x+3;							//new projectile location set to player 2 pos +3 to place it in the middle of ship
 					shootbool = 1;
 					player2button = 0;
 					break;
@@ -422,7 +431,7 @@ int main(void){
 		}else{
 			lastbutton2 = 0;
 		}
-		//projectiles movement steps
+		//projectiles movement steps are part of timer 1 and 2
 		
 		
 		//projectile collision steps
@@ -446,9 +455,15 @@ int main(void){
 		for(i = 0; i<4; i++){									
 			if(blueprojectiles[i].life == alive){	//outtput green player 1 projectiles
 				ST7735_DrawBitmap(blueprojectiles[i].x, blueprojectiles[i].y, blueprojectiles[i].image, blueprojectiles[i].width, blueprojectiles[i].height); // player ship1 middle bottom
+				if(blueprojectiles[i].y<127){
+					ST7735_DrawBitmap(blueprojectiles[i].x, blueprojectiles[i].y+8, projectilebox, 8, 8); //draws black box to cover up last missile
+				}
 			}
 			if(greenprojectiles[i].life == alive){	//output blue palyer 2 projectiles
 				ST7735_DrawBitmap(greenprojectiles[i].x, greenprojectiles[i].y, greenprojectiles[i].image, greenprojectiles[i].width, greenprojectiles[i].height); // player ship1 middle bottom
+				if(blueprojectiles[i].y>38){
+					ST7735_DrawBitmap(greenprojectiles[i].x, greenprojectiles[i].y-8, projectilebox, 8, 8); //draws black box to cover up last missile
+				}
 			}
 		}
 		//output sounds
@@ -487,7 +502,30 @@ int main(void){
 }
 
 void incrPlayer1Projectiles(void){
+	int i;
+	for(i = 0; i<4; i++){
+		if(blueprojectiles[i].life == alive){	//outtput green player 1 projectiles
+				blueprojectiles[i].y--;
+		}
+		if(blueprojectiles[i].y == -20){				//if projectile goes off screen set it to dead
+			blueprojectiles[i].y = 135;
+			blueprojectiles[i].life = dead;
+		}
+	}
+}
 
+
+void incrPlayer2Projectiles(void){
+	int i;
+	for(i = 0; i<4; i++){
+		if(greenprojectiles[i].life == alive){	//outtput green player 1 projectiles
+				greenprojectiles[i].y++;
+		}
+		if(greenprojectiles[i].y == 170){				//if projectile goes off screen set it to dead
+			greenprojectiles[i].y = 30;
+			greenprojectiles[i].life = dead;
+		}		
+	}
 }
 //built for testing buttons
 int main1(void){
