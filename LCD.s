@@ -18,7 +18,9 @@
 ; RESET (pin 3) connected to PA7 (GPIO)
 ; VCC (pin 2) connected to +3.3 V
 ; Gnd (pin 1) connected to ground
-
+DC                      EQU   0x40004100
+DC_COMMAND              EQU   0
+DC_DATA                 EQU   0x40
 GPIO_PORTA_DATA_R       EQU   0x400043FC
 SSI0_DR_R               EQU   0x40008008
 SSI0_SR_R               EQU   0x4000800C
@@ -62,7 +64,25 @@ writecommand
 ;4) Write the command to SSI0_DR_R
 ;5) Read SSI0_SR_R and check bit 4, 
 ;6) If bit 4 is high, loop back to step 5 (wait for BUSY bit to be low)
-
+commWait1					
+	LDR R1, =SSI0_SR_R		;read SSIO_SR_R and check bit4
+	LDR R2, [R1]
+	AND R2, #0x10   
+	CMP R2, #0x10
+	BEQ commWait1			;if bit 4 is high loop
+	LDR R1, =DC
+	LDR R2, [R1]
+	AND R2, #0xBF			;set PA6 to 0 because writing command
+	STR R2, [R1]		
+	LDR R1, =SSI0_DR_R
+	STRB R0, [R1]			;write command to SSIO_DR_R
+commWait2
+	LDR R1, =SSI0_SR_R		;read SSIO_SR_R and check bit4
+	LDR R2, [R1]
+	AND R2, #0X10      
+	CMP R2, #0X10
+	BEQ commWait2			;if bit 4 is high, loop
+    
     
     
     BX  LR                          ;   return
@@ -76,7 +96,18 @@ writedata
 ;2) If bit 1 is low loop back to step 1 (wait for TNF bit to be high)
 ;3) Set D/C=PA6 to one
 ;4) Write the 8-bit data to SSI0_DR_R
-
+writeLoop1
+	LDR R1, =SSI0_SR_R
+	LDR R2, [R1]
+	AND R2, #0x01		;check bit 1
+	CMP R2, #0x00
+	BEQ writeLoop1		;if low loop back
+	LDR R1, =DC			
+	LDR R2, [R1]
+	ORR R2, #0x40		; writing data so set it to 1, as per instructions
+	STR R2, [R1]
+	LDR R1, =SSI0_DR_R
+	STR R0, [R1]		; store data to be processed into DR
     
     
     BX  LR                          ;   return

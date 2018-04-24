@@ -7,6 +7,7 @@
 #include <stdint.h>
 #include "Sound.h"
 #include "DAC.h"
+#include "tm4c123gh6pm.h"
 
 const uint8_t shoot[4080] = {
   129, 99, 103, 164, 214, 129, 31, 105, 204, 118, 55, 92, 140, 225, 152, 61, 84, 154, 184, 101, 
@@ -1137,34 +1138,82 @@ const uint8_t highpitch[1802] = {
   67, 119, 148, 166, 164, 238, 223, 202, 174, 112, 96, 78, 0, 34, 54, 99, 143, 160, 166, 183, 
   250, 207};
 
+//a single C note wave of 523 Hz would have 11 samples ((1/523) sec * 5800 samples/sec)
+	
+	
+	
+const uint8_t *globalpt;
+uint32_t globalMaxCount;
+uint32_t globalCount;
+
+
+uint32_t TimerCount;
+
+//this would have a rate of about 5800 samples/second
 void Sound_Init(void){
-// write this
+	uint32_t volatile delay;
+	SYSCTL_RCGCTIMER_R |= 0x04;   //activate timer 2A
+	delay = SYSCTL_RCGCTIMER_R;
+	TimerCount = 0;
+	TIMER2_CTL_R = 0x00000000; //1) Disable timer 2A during setup
+	TIMER2_CFG_R = 0x00000000; //2) 32-bit mode
+	TIMER2_TAMR_R = 0x00000002; //3) Periodic mode
+	TIMER2_TAILR_R = 7256-1;       //4) Reload value set to 11.25kHz 80000000/11025 = 7256
+	TIMER2_TAPR_R = 0;	 //5) Clock resolution 
+	TIMER2_ICR_R = 0x00000001; //6)Clear timeout flag
+	TIMER2_IMR_R = 0x00000001;	//7) arm timeout
+	NVIC_PRI5_R = (NVIC_PRI5_R&0x00FFFFFF) | 0x80000000; //8)Priority 4
+	NVIC_EN0_R = 1<<23;	// 9) IRQ 23 in
+	TIMER2_CTL_R = 0x00000000; // 10) enable timer2A
+	
+  DAC_Init();	//calls DAC_Init
 };
+
 void Sound_Play(const uint8_t *pt, uint32_t count){
 // write this
+	globalpt = pt;
+	TimerCount = 0;
+	globalMaxCount = count;
+	globalCount = 0;
 };
+
 void Sound_Shoot(void){
 // write this
+	Timer2A_Start();
+	Sound_Play(invaderkilled, 3377);
 };
 void Sound_Killed(void){
 // write this
+  Timer2A_Start();
+	Sound_Play(shoot, 4080);
 };
 void Sound_Explosion(void){
 // write this
-};
+	Timer2A_Start();
+	Sound_Play(explosion, 2000);
+}
 
-void Sound_Fastinvader1(void){
-// write this
-};
-void Sound_Fastinvader2(void){
-// write this
-};
-void Sound_Fastinvader3(void){
-// write this
-};
-void Sound_Fastinvader4(void){
-// write this
-};
 void Sound_Highpitch(void){
 // write this
-};
+	Timer2A_Start();
+	Sound_Play(highpitch, 1802);
+}
+
+void Timer2A_Handler(void){
+	TIMER2_ICR_R = 0x00000001; //acknowledge
+	TimerCount++;
+	DAC_Out((int)(globalpt[globalCount]/16));
+	globalCount = (globalCount+1)%globalMaxCount;
+	if(TimerCount == globalMaxCount){
+		Timer2A_Stop();
+	}
+	//output sounds here
+}
+
+void Timer2A_Stop(void){
+	TIMER2_CTL_R &= ~0x00000001; //disable
+}
+
+void Timer2A_Start(void){
+	TIMER2_CTL_R |= 0x00000001;	//enable
+}
