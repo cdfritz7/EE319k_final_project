@@ -338,7 +338,7 @@ typedef struct sprite sprite_t;
 
 sprite_t players[2] = {
 	{52, 159, 12, 18, bluespaceship, alive},
-	{52, 18, 12, 18, greenspaceship, alive},
+	{52, 17, 12, 18, greenspaceship, alive},
 };
 
 sprite_t blueprojectiles[4] = {
@@ -403,7 +403,7 @@ int main(void){
 		
 		//projectile firing steps
 		if(button1pressed == 1 && button1pressed != lastbutton1){	//checks if button1 has been pressed and if it is different from last cycle
-			for(i = 0; i<5; i++){
+			for(i = 0; i<4; i++){
 				if(blueprojectiles[i].life == dead){									//if so make a new blue projectile
 					blueprojectiles[i].life = alive;
 					blueprojectiles[i].x = players[0].x+3;							//new projectile location set to player 1 pos +3 to place it in middle of ship
@@ -418,7 +418,7 @@ int main(void){
 		}
 		
 	  if(button2pressed == 1 && button2pressed != lastbutton2){	//checks if button2 has been pressed and if it is different from last cycle
-			for(i = 0; i<5; i++){
+			for(i = 0; i<4; i++){
 				if(greenprojectiles[i].life == dead){								//if so make a new green projectile
 					greenprojectiles[i].life = alive;
 					greenprojectiles[i].x = players[1].x+3;							//new projectile location set to player 2 pos +3 to place it in the middle of ship
@@ -455,11 +455,13 @@ int main(void){
 		for(i = 0; i<4; i++){									
 			if(blueprojectiles[i].life == alive){	//outtput green player 1 projectiles
 				ST7735_DrawBitmap(blueprojectiles[i].x, blueprojectiles[i].y, blueprojectiles[i].image, blueprojectiles[i].width, blueprojectiles[i].height); // player ship1 middle bottom
-				if(blueprojectiles[i].y<127){
+				if(blueprojectiles[i].y<130){
 					ST7735_DrawBitmap(blueprojectiles[i].x, blueprojectiles[i].y+8, projectilebox, 8, 8); //draws black box to cover up last missile
 				}
 			}
-			if(greenprojectiles[i].life == alive){	//output blue palyer 2 projectiles
+		}
+		for(i = 0; i<4; i++){
+			if(greenprojectiles[i].life == alive){	//output blue player 2 projectiles
 				ST7735_DrawBitmap(greenprojectiles[i].x, greenprojectiles[i].y, greenprojectiles[i].image, greenprojectiles[i].width, greenprojectiles[i].height); // player ship1 middle bottom
 				if(blueprojectiles[i].y>38){
 					ST7735_DrawBitmap(greenprojectiles[i].x, greenprojectiles[i].y-8, projectilebox, 8, 8); //draws black box to cover up last missile
@@ -507,7 +509,7 @@ void incrPlayer1Projectiles(void){
 		if(blueprojectiles[i].life == alive){	//outtput green player 1 projectiles
 				blueprojectiles[i].y--;
 		}
-		if(blueprojectiles[i].y == -20){				//if projectile goes off screen set it to dead
+		if(blueprojectiles[i].y == -25){				//if projectile goes off screen set it to dead
 			blueprojectiles[i].y = 135;
 			blueprojectiles[i].life = dead;
 		}
